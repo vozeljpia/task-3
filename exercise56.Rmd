@@ -1,0 +1,114 @@
+---
+title: "Task 5,6"
+output: html_document
+---
+
+# Task 5.0
+```{r echo=T, results='hide',warning = FALSE, message = FALSE}
+pedestrian <- read_delim("pedestrian.csv",",") 
+str(pedestrian)
+pedestrian$TrajID=as.factor(pedestrian$TrajID)
+
+#plot and explore
+pedestrian %>%
+  ggplot(aes(y=N, x=E)) +
+  geom_path()+ geom_point(aes(col=TrajID)) + 
+  coord_equal() + 
+  facet_wrap(~TrajID,nrow=2) +
+  labs(title="Visual comparison of the 6 trajectories", subtitle="Each subplot highlights a trajectory")
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+#Task 5
+ggplot(pedestrian, aes(E,N)) + 
+#geom_point(data = dplyr::select(pedestrian, -TrajID) alpha = 0.1) +
+geom_point(aes(color = as.factor(TrajID)), size = 2) + 
+geom_path(aes(color =as.factor(TrajID))) +
+facet_wrap(~TrajID, labeller = label_both) +
+coord_equal() +
+theme_minimal() +
+labs(title = "Visual comparison of the 6 trajectories") +
+theme(legend.position = "none")
+
+
+#Task 6
+
+
+
+{r echo=T, results='hide',warning = FALSE, message = FALSE}
+pedestrians_matrix <- pedestrian %>%
+  dplyr::select(E, N) %>% # selecting only what we need            
+  split(pedestrian$TrajID) %>%   # splitting based on the different Trajectories  
+  map(as.matrix) # applying universally the as.matrix conversion function using the purrr:map() function
+
+dtw_fun= function(y) {
+  dtw = DTW(pedestrians_matrix[[1]],y)
+  return(dtw)}
+
+dtw_all = pedestrians_matrix %>%
+  map(dtw_fun) %>%
+  data.frame() %>%
+  pivot_longer(cols=1:6,names_to = "trajectory",values_to = "Value") %>%
+  data.frame() 
+
+dtw_all$trajectory=as.factor(dtw_all$trajectory)
+
+dtw_plot=ggplot(dtw_all, aes(x=trajectory,y=Value, fill=trajectory)) + geom_bar(stat="identity")
+dtw_plot
+
+editdist_fun= function(y) {
+  Editdist = EditDist(pedestrians_matrix[[1]],y)
+  return(Editdist)}
+
+editdist_all = pedestrians_matrix %>%
+  map(editdist_fun) %>%
+  data.frame() %>%
+  pivot_longer(cols=1:6,names_to = "trajectory",values_to = "Value") %>%
+  data.frame() 
+
+editdist_all$trajectory=as.factor(editdist_all$trajectory)
+
+editdist_plot=ggplot(editdist_all, aes(x=trajectory,y=Value, fill=trajectory)) + geom_bar(stat="identity")
+editdist_plot
+
+frechet_fun= function(y) {
+  frechet = Frechet(pedestrians_matrix[[1]],y)
+  return(frechet)}
+
+frechet_all = pedestrians_matrix %>%
+  map(frechet_fun) %>%
+  data.frame() %>%
+  pivot_longer(cols=1:6,names_to = "trajectory",values_to = "Value") %>%
+  data.frame() 
+
+frechet_all$trajectory=as.factor(frechet_all$trajectory)
+
+frechet_plot=ggplot(frechet_all, aes(x=trajectory,y=Value, fill=trajectory)) + geom_bar(stat="identity")
+frechet_plot
+
+lcss_fun= function(y) {
+  lcss = LCSS(pedestrians_matrix[[1]],y, pointSpacing=0.5, pointDistance=10,
+  errorMarg=2, returnTrans=FALSE)
+  return(lcss)}
+
+lcss_all = pedestrians_matrix %>%
+  map(lcss_fun) %>%
+  data.frame() %>%
+  pivot_longer(cols=1:6,names_to = "trajectory",values_to = "Value") %>%
+  data.frame() 
+
+lcss_all$trajectory=as.factor(lcss_all$trajectory)
+
+lcss_plot=ggplot(lcss_all, aes(x=trajectory,y=Value, fill=trajectory)) + geom_bar(stat="identity")
+lcss_plot
+
+final_plot=ggarrange(dtw_plot, editdist_plot, frechet_plot,lcss_plot, ncol=2, nrow=2, common.legend=TRUE, legend = "right")
+annotate_figure
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
